@@ -3,30 +3,35 @@ package main
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"periph.io/x/conn/v3/i2c"
 	"periph.io/x/conn/v3/i2c/i2creg"
 	"periph.io/x/host/v3"
+	"strings"
 	"time"
 )
 
 const (
-	// BMP390 specific registers
+	// BMP390 registers
 	regChipID    = 0x00
-	regErr       = 0x02
 	regStatus    = 0x03
 	regPressData = 0x04
 	regTempData  = 0x07
 	regPWRCtrl   = 0x1B
 	regOSR       = 0x1C
-	regODR       = 0x1D
-	regConfig    = 0x1F
 	regCmd       = 0x7E
 )
 
-type BMP390 struct {
-	dev i2c.Dev
+// Helper to list available I2C paths
+func listI2CBuses() ([]string, error) {
+	paths, err := filepath.Glob("/dev/i2c-*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list I2C buses: %v", err)
+	}
+	return paths, nil
 }
 
+// Write to a specific register
 func writeReg(dev *i2c.Dev, reg, value uint8) error {
 	n, err := dev.Write([]byte{reg, value})
 	if err != nil {
@@ -38,135 +43,132 @@ func writeReg(dev *i2c.Dev, reg, value uint8) error {
 	return nil
 }
 
-func NewBMP390(bus i2c.BusCloser) (*BMP390, error) {
+// BMP390 initialization
+func initializeBMP390(bus i2c.BusCloser) (*i2c.Dev, error) {
 	dev := &i2c.Dev{Bus: bus, Addr: 0x77}
 
-	// Read error register first to check device state
-	var errReg [1]byte
-	if err := dev.Tx([]byte{regErr}, errReg[:]); err != nil {
-		return nil, fmt.Errorf("failed to read error register: %v", err)
-	}
-	log.Printf("Error register value: 0x%02X", errReg[0])
-
-	// Read chip ID
+	// Check chip ID
 	var id [1]byte
 	if err := dev.Tx([]byte{regChipID}, id[:]); err != nil {
 		return nil, fmt.Errorf("failed to read chip ID: %v", err)
 	}
-	log.Printf("Chip ID: 0x%02X", id[0])
 
-	// Soft reset the device
+	if id[0] != 0x60 { // Replace with your BMP390 chip ID from the datasheet
+		return nil, fmt.Errorf("unexpected chip ID: 0x%02X", id[0])
+	}
+	log.Printf("Chip ID verified: 0x%02X", id[0])
+
+	// Soft reset
 	if err := writeReg(dev, regCmd, 0xB6); err != nil {
-		return nil, fmt.Errorf("reset failed: %v", err)
+		return nil, fmt.Errorf("failed to reset sensor: %v", err)
 	}
 	time.Sleep(20 * time.Millisecond)
 
-	// Wait for power-up
-	time.Sleep(10 * time.Millisecond)
-
-	// Read status after reset
-	var status [1]byte
-	if err := dev.Tx([]byte{regStatus}, status[:]); err != nil {
-		return nil, fmt.Errorf("failed to read status: %v", err)
-	}
-	log.Printf("Status after reset: 0x%02X", status[0])
-
-	// Configure the sensor step by step with error checking
+	// Configure the sensor
 	steps := []struct {
 		reg   uint8
 		value uint8
 		name  string
 	}{
-		{regPWRCtrl, 0x33, "power control"}, // Enable pressure and temp
-		{regOSR, 0x03 | (0x02 << 3), "OSR"}, // Oversampling settings
-		{regODR, 0x02, "ODR"},               // Output data rate
-		{regConfig, 0x02, "config"},         // IIR filter settings
+		{regPWRCtrl, 0x33, "Power Control"}, // Enable pressure and temperature
+		{regOSR, 0x27, "Oversampling"},      // Oversampling settings
 	}
 
 	for _, step := range steps {
 		if err := writeReg(dev, step.reg, step.value); err != nil {
 			return nil, fmt.Errorf("failed to set %s: %v", step.name, err)
 		}
-		time.Sleep(5 * time.Millisecond)
-
-		// Verify write
-		var readback [1]byte
-		if err := dev.Tx([]byte{step.reg}, readback[:]); err != nil {
-			return nil, fmt.Errorf("failed to verify %s: %v", step.name, err)
-		}
-		if readback[0] != step.value {
-			return nil, fmt.Errorf("%s verification failed: wrote 0x%02X, read 0x%02X",
-				step.name, step.value, readback[0])
-		}
-		log.Printf("Successfully configured %s", step.name)
+		time.Sleep(10 * time.Millisecond)
+		log.Printf("%s configured", step.name)
 	}
 
-	return &BMP390{dev: *dev}, nil
+	return dev, nil
 }
 
-func (b *BMP390) ReadRawData() (int32, int32, error) {
+// Read raw data from BMP390
+func readRawData(dev *i2c.Dev) (int32, int32, error) {
 	// Check if data is ready
 	var status [1]byte
-	if err := b.dev.Tx([]byte{regStatus}, status[:]); err != nil {
+	if err := dev.Tx([]byte{regStatus}, status[:]); err != nil {
 		return 0, 0, fmt.Errorf("failed to read status: %v", err)
 	}
-	log.Printf("Status before read: 0x%02X", status[0])
-
-	// Read pressure (24 bits) and temperature (24 bits)
-	var pressData [3]byte
-	var tempData [3]byte
-
-	if err := b.dev.Tx([]byte{regPressData}, pressData[:]); err != nil {
-		return 0, 0, fmt.Errorf("failed to read pressure: %v", err)
+	if status[0]&0x08 == 0 || status[0]&0x04 == 0 {
+		return 0, 0, fmt.Errorf("data not ready")
 	}
 
-	if err := b.dev.Tx([]byte{regTempData}, tempData[:]); err != nil {
+	// Read pressure and temperature
+	var pressData, tempData [3]byte
+	if err := dev.Tx([]byte{regPressData}, pressData[:]); err != nil {
+		return 0, 0, fmt.Errorf("failed to read pressure: %v", err)
+	}
+	if err := dev.Tx([]byte{regTempData}, tempData[:]); err != nil {
 		return 0, 0, fmt.Errorf("failed to read temperature: %v", err)
 	}
 
 	pressure := int32(uint32(pressData[2])<<16 | uint32(pressData[1])<<8 | uint32(pressData[0]))
 	temperature := int32(uint32(tempData[2])<<16 | uint32(tempData[1])<<8 | uint32(tempData[0]))
-
 	return pressure, temperature, nil
 }
 
 func main() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
-	log.Println("Starting BMP390 reader...")
+	log.Println("Starting BMP390 script...")
 
 	// Initialize periph.io
 	if _, err := host.Init(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to initialize periph.io: %v", err)
 	}
 
-	// Open I2C bus 1 specifically
-	bus, err := i2creg.Open("/dev/i2c-1")
+	// List available I2C buses
+	paths, err := listI2CBuses()
 	if err != nil {
-		log.Fatal("Failed to open I2C bus:", err)
+		log.Fatal(err)
+	}
+	if len(paths) == 0 {
+		log.Fatal("No I2C buses found!")
+	}
+	log.Printf("Available I2C buses: %s", strings.Join(paths, ", "))
+
+	// Prompt user for I2C bus selection if multiple are available
+	selectedBus := paths[0]
+	if len(paths) > 1 {
+		fmt.Println("Select an I2C bus from the following:")
+		for i, path := range paths {
+			fmt.Printf("[%d] %s\n", i, path)
+		}
+		fmt.Print("Enter the number corresponding to your choice: ")
+		var choice int
+		if _, err := fmt.Scan(&choice); err != nil || choice < 0 || choice >= len(paths) {
+			log.Fatal("Invalid choice, exiting.")
+		}
+		selectedBus = paths[choice]
+	}
+
+	log.Printf("Using I2C bus: %s", selectedBus)
+
+	// Open the selected I2C bus
+	bus, err := i2creg.Open(selectedBus)
+	if err != nil {
+		log.Fatalf("Failed to open I2C bus: %v", err)
 	}
 	defer bus.Close()
 
-	// Create new BMP390 instance
-	bmp, err := NewBMP390(bus)
+	// Initialize BMP390
+	dev, err := initializeBMP390(bus)
 	if err != nil {
-		log.Fatal("Failed to initialize BMP390:", err)
+		log.Fatalf("Failed to initialize BMP390: %v", err)
 	}
 
 	log.Println("BMP390 initialized successfully!")
 
-	// Read values in a loop
+	// Read data in a loop
 	for {
-		pressure, temp, err := bmp.ReadRawData()
+		pressure, temperature, err := readRawData(dev)
 		if err != nil {
-			log.Printf("Error reading values: %v", err)
-			time.Sleep(time.Second)
-			continue
+			log.Printf("Error reading data: %v", err)
+		} else {
+			log.Printf("Pressure: %d, Temperature: %d", pressure, temperature)
 		}
-
-		log.Printf("Raw Pressure: %d", pressure)
-		log.Printf("Raw Temperature: %d", temp)
-		log.Println("---")
-
-		time.Sleep(time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
