@@ -18,7 +18,8 @@ async def collect_and_store_metrics(session: AsyncSession):
         cpu_percent=collected_data.get("cpu_percent"),
         memory_percent=collected_data.get("memory_percent"),
         disk_usage_percent=collected_data.get("disk_usage_percent"),
-        # Add other fields as needed
+        cpu_temp_celsius=collected_data.get("cpu_temp_celsius"),
+        fan_speed_percent=collected_data.get("fan_speed_percent"),
     )
 
     # Use the session factory to get a session within the task

@@ -2,16 +2,22 @@ import psutil
 from typing import Optional, Dict, Any
 from loguru import logger
 
+# Define the expected path for RPi5 fan speed PWM value
+# This might need adjustment depending on the exact kernel/OS setup
+_FAN_PWM_SYSFS_PATH = "/sys/class/thermal/cooling_device0/cur_state"
+_FAN_MAX_PWM = 255.0 # Standard max PWM value
+
 class MetricsService:
     """Service responsible for collecting system metrics."""
 
     def get_system_metrics(self) -> Dict[str, Optional[float]]:
-        """Collects CPU, Memory, and Disk usage percentages."""
+        """Collects CPU, Memory, Disk usage, Temp, and Fan speed."""
         metrics: Dict[str, Optional[float]] = {
             "cpu_percent": None,
             "memory_percent": None,
             "disk_usage_percent": None,
-            # Add keys for other metrics like temperature here
+            "cpu_temp_celsius": None,
+            "fan_speed_percent": None,
         }
         try:
             metrics["cpu_percent"] = psutil.cpu_percent(interval=0.1) # Short interval for responsiveness
@@ -32,18 +38,46 @@ class MetricsService:
         except Exception as e:
             logger.warning(f"Could not collect Disk usage metrics: {e}")
 
-        # Example placeholder for temperature (requires platform-specific libraries)
-        # try:
-        #     temps = psutil.sensors_temperatures()
-        #     # Find relevant temperature sensor (e.g., 'coretemp')
-        #     # This part is highly system-dependent
-        #     if 'coretemp' in temps:
-        #         # Average or take the first core temp
-        #         metrics["temperature_celsius"] = temps['coretemp'][0].current
-        # except AttributeError:
-        #      logger.debug("sensors_temperatures not available on this system.")
-        # except Exception as e:
-        #     logger.warning(f"Could not collect Temperature metrics: {e}")
+        # --- Collect CPU Temperature ---
+        try:
+            if hasattr(psutil, "sensors_temperatures"):
+                temps = psutil.sensors_temperatures()
+                # RPi typically uses 'cpu_thermal' or similar
+                # Adapt key if necessary based on `print(temps)`
+                sensor_key = None
+                if 'cpu_thermal' in temps:
+                    sensor_key = 'cpu_thermal'
+                elif 'coretemp' in temps: # Fallback for other systems
+                    sensor_key = 'coretemp'
+                # Add other potential keys if needed
+
+                if sensor_key and temps[sensor_key]:
+                    # Take the first sensor reading for the key
+                    metrics["cpu_temp_celsius"] = temps[sensor_key][0].current
+                else:
+                    logger.debug(f"Could not find a known CPU temperature sensor key in {list(temps.keys())}")
+            else:
+                 logger.debug("psutil.sensors_temperatures not available on this system.")
+        except Exception as e:
+            logger.warning(f"Could not collect CPU Temperature metrics: {e}")
+            
+        # --- Collect Fan Speed Percentage (RPi specific) ---
+        try:
+            with open(_FAN_PWM_SYSFS_PATH, 'r') as f:
+                pwm_value_str = f.read().strip()
+                try:
+                    pwm_value = int(pwm_value_str)
+                    # Convert PWM value (0-255) to percentage
+                    metrics["fan_speed_percent"] = max(0.0, min(100.0, (pwm_value / _FAN_MAX_PWM) * 100.0))
+                except ValueError:
+                     logger.warning(f"Could not parse fan PWM value from '{_FAN_PWM_SYSFS_PATH}': '{pwm_value_str}' is not an integer.")
+        except FileNotFoundError:
+            logger.debug(f"Fan speed sysfs path not found: '{_FAN_PWM_SYSFS_PATH}'. Fan speed monitoring disabled.")
+        except PermissionError:
+            logger.warning(f"Permission denied reading fan speed from '{_FAN_PWM_SYSFS_PATH}'.")
+        except Exception as e:
+            logger.warning(f"Could not collect Fan Speed metrics from '{_FAN_PWM_SYSFS_PATH}': {e}")
+
 
         logger.debug(f"Collected metrics: {metrics}")
         return metrics

@@ -15,6 +15,7 @@ from .config import Settings, get_settings
 from .api import routes as api_routes
 from .database import init_db, engine
 from .tasks.metrics_collector import run_metrics_collector_task
+from .tasks.fan_control_task import run_fan_control_task
 
 # List to keep track of background tasks
 background_tasks = set()
@@ -32,27 +33,63 @@ async def lifespan(app: FastAPI):
     await init_db(engine)
     logger.info("Database initialized.")
 
-    # Start Background Tasks conditionally
+    # --- Start Background Tasks --- 
     logger.info("Starting background tasks...")
-    task = None
-    if settings.tasks.metrics.enabled:
-        task = asyncio.create_task(run_metrics_collector_task(settings))
-        logger.info("Metrics collector task started.")
+    background_tasks.clear() # Ensure list is clear before starting
+
+    # Start Metrics Collector Task
+    if settings.tasks and settings.tasks.metrics.enabled:
+        metrics_task = asyncio.create_task(run_metrics_collector_task(settings))
+        background_tasks.add(metrics_task)
+        logger.info("Metrics collector task scheduled.")
+        # Keep track of the task to cancel it properly on shutdown
+        metrics_task.add_done_callback(background_tasks.discard)
     else:
         logger.info("Metrics collector task is disabled in settings.")
+
+    # Start Fan Control Task
+    if settings.fan_control and settings.fan_control.enabled:
+        fan_task = asyncio.create_task(run_fan_control_task(settings))
+        background_tasks.add(fan_task)
+        logger.info("Fan control task scheduled.")
+        # Keep track of the task to cancel it properly on shutdown
+        fan_task.add_done_callback(background_tasks.discard)
+    else:
+        logger.info("Fan control task is disabled in settings.")
 
     yield # Application runs here
 
     # --- Shutdown --- 
-    logger.info("Application shutdown...")
-    if task and not task.done():
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            logger.info("Metrics collector task cancelled.")
+    logger.info("Application shutdown initiated...")
+    logger.info(f"Cancelling {len(background_tasks)} background tasks...")
+    for task in list(background_tasks): # Iterate over a copy
+        if not task.done():
+            task.cancel()
+            try:
+                # Wait for the task to acknowledge cancellation
+                await asyncio.wait_for(task, timeout=5.0) 
+            except asyncio.CancelledError:
+                logger.info(f"Task {task.get_name()} cancelled successfully.")
+            except asyncio.TimeoutError:
+                logger.warning(f"Task {task.get_name()} did not cancel within timeout.")
+            except Exception as e:
+                logger.error(f"Error during cancellation of task {task.get_name()}: {e}")
+        else:
+            # Log if task already finished (e.g., due to an error)
+            exception = task.exception()
+            if exception:
+                logger.warning(f"Background task {task.get_name()} finished with exception: {exception}")
+            else:
+                 logger.info(f"Background task {task.get_name()} already finished.")
+                 
+    # Explicitly wait for all tasks to ensure they are cleaned up
+    if background_tasks: # Check if set is not empty after callbacks
+        await asyncio.gather(*background_tasks, return_exceptions=True)
+        logger.info("All background tasks awaited.")
+        
     await engine.dispose() # Correctly dispose of the engine's connections
     logger.info("Database connection pool closed.")
+    logger.info("Application shutdown complete.")
 
 # Create FastAPI app instance
 app_instance = FastAPI(

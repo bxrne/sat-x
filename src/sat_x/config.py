@@ -1,5 +1,5 @@
 import yaml
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, validator
 from typing import List, Optional, Dict, Any
 import os
 from pathlib import Path
@@ -22,6 +22,33 @@ class MetricsTaskSettings(BaseModel):
     enabled: bool = True
     interval_seconds: int = Field(60, gt=0) # Ensure interval is positive
 
+# --- Fan Control Settings ---
+class FanCurvePoint(BaseModel):
+    temp: float = Field(..., description="Temperature threshold in Celsius.")
+    # Speed as percentage (0-100)
+    speed: float = Field(..., ge=0, le=100, description="Fan speed percentage (0-100).")
+
+class FanControlSettings(BaseModel):
+    enabled: bool = Field(False, description="Enable/disable automatic fan control.")
+    interval_seconds: int = Field(10, gt=0, description="How often to check temp and adjust fan.")
+    # Note: These paths are typical but might need verification on the target system
+    control_path: Optional[str] = Field("/sys/class/hwmon/hwmon0/pwm1", description="Sysfs path to write PWM value (0-255).")
+    enable_path: Optional[str] = Field("/sys/class/hwmon/hwmon0/pwm1_enable", description="Sysfs path to enable/disable manual PWM control (e.g., write '1').")
+    curve: List[FanCurvePoint] = Field(
+        default_factory=list, 
+        description="List of temp (°C) to speed (%) points, sorted by temp."
+    )
+
+    @validator('curve')
+    def check_curve_sorted(cls, v):
+        if not v:
+            # Allow empty curve if disabled, maybe log warning if enabled?
+            return v
+        temps = [p.temp for p in v]
+        if temps != sorted(temps):
+            raise ValueError('Fan curve points must be sorted by temperature.')
+        return v
+
 class TasksSettings(BaseModel):
     metrics: MetricsTaskSettings
     # Add other task configurations here
@@ -31,6 +58,7 @@ class Settings(BaseModel):
     api: ApiSettings
     database: DatabaseSettings
     tasks: TasksSettings
+    fan_control: Optional[FanControlSettings] = None # Added Fan Control
     # Add other top-level settings here
     # logging: LoggingSettings
 

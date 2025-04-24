@@ -17,8 +17,10 @@ class Metric(Base):
     cpu_percent: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     memory_percent: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     disk_usage_percent: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    cpu_temp_celsius: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    fan_speed_percent: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     # Add other metrics like temperature if available via psutil or other libraries
     # temperature_celsius: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     def __repr__(self):
-        return f"<Metric(id={self.id}, timestamp={self.timestamp}, cpu={self.cpu_percent:.1f}%)>"
+        return f"<Metric(id={self.id}, timestamp={self.timestamp}, cpu={self.cpu_percent:.1f}%, temp={self.cpu_temp_celsius}°C, fan={self.fan_speed_percent}%)>"

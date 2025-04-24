@@ -17,3 +17,28 @@ tasks:
   metrics:
     enabled: true
     interval_seconds: 60 # How often to collect metrics
+
+# Fan Control Settings (Verify paths for RPi 5!)
+fan_control:
+  enabled: true # Disabled by default -> Now enabled
+  interval_seconds: 10
+  # Example sysfs paths - VERIFY THESE on your Pi 5
+  # Check output of `ls /sys/class/hwmon/` and explore subdirectories
+  # Corrected paths based on ls output for RPi 5:
+  control_path: "/sys/devices/platform/cooling_fan/hwmon/hwmon2/pwm1"
+  enable_path: "/sys/devices/platform/cooling_fan/hwmon/hwmon2/pwm1_enable"
+  # Fan curve: Temp (°C) -> Speed (%)
+  # List must be sorted by temperature.
+  curve:
+    # Fan off below 50C
+    - temp: 0
+      speed: 0 
+    # 30% speed at 50C
+    - temp: 30
+      speed: 30
+    # 70% speed at 65C
+    - temp: 65
+      speed: 70
+    # 100% speed at 75C
+    - temp: 75
+      speed: 100
