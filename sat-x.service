@@ -1,0 +1,24 @@
+[Unit]
+Description=sat-x System Monitoring Service
+After=network.target
+
+[Service]
+# Assumes the user running this service is the same user who owns the project files
+# User=your_username # Not needed for --user services
+
+# Assumes a virtual environment named .venv in the project root
+# Update this path if your venv or uvicorn location is different
+ExecStart=/home/bxrne/sat-x/.venv/bin/uvicorn sat_x.main:app_instance --host 127.0.0.1 --port 8000
+
+WorkingDirectory=/home/bxrne/sat-x
+Restart=always
+RestartSec=3
+Environment="PYTHONPATH=/home/bxrne/sat-x/src" # Ensure src directory is in Python path
+
+# Standard output and error logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sat-x
+
+[Install]
+WantedBy=default.target
