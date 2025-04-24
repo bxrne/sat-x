@@ -13,7 +13,7 @@ ExecStart=/home/bxrne/sat-x/.venv/bin/uvicorn sat_x.main:app_instance --host 127
 WorkingDirectory=/home/bxrne/sat-x
 Restart=always
 RestartSec=3
-Environment="PYTHONPATH=/home/bxrne/sat-x/src" # Ensure src directory is in Python path
+Environment="PYTHONPATH=/home/bxrne/sat-x/src"
 
 # Standard output and error logging
 StandardOutput=journal
