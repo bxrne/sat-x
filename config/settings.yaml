@@ -1,0 +1,19 @@
+# sat-x Configuration
+
+api:
+  host: "127.0.0.1"
+  port: 8000
+  # Add other API related settings like CORS origins if needed
+  # cors_origins: ["http://localhost:3000"]
+
+database:
+  # Example for SQLite + aiosqlite
+  # The path will be relative to where the application is run
+  # Or use an absolute path like: sqlite+aiosqlite:////path/to/your/satx.db
+  url: "sqlite+aiosqlite:///./satx.db"
+  echo: false # Set to true for verbose SQL logging
+
+tasks:
+  metrics:
+    enabled: true
+    interval_seconds: 60 # How often to collect metrics

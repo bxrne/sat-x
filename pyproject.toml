@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sat-x"
+version = "0.1.0"
+description = "System Agent Task orchestrator with monitoring and API."
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+requires-python = ">=3.9"
+license = {text = "MIT"}
+
+# Core dependencies
+dependencies = [
+    "fastapi[all]>=0.109.0",        # Web framework (includes pydantic, uvicorn)
+    "sqlalchemy[asyncio]>=2.0.25",   # ORM
+    "aiosqlite>=0.19.0",            # Async SQLite driver
+    "pyyaml>=6.0.1",                # YAML parsing
+    "psutil>=5.9.8",                # System metrics
+    "typer>=0.9.0",                 # CLI
+    "loguru>=0.7.2",                # Better logging
+    "httpx>=0.27.0",                 # Required by FastAPI TestClient
+    "pytest>=8.0.0",                # Testing framework
+    "alembic>=1.13.1",             # Database migrations
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",
+    "pytest-asyncio>=0.23.0"
+]
+
+[project.scripts]
+sat-x = "sat_x.main:app"
+
+[tool.uv.sources]
+# Optional: Specify custom package indexes if needed
+# my-index = "https://my-private-index.com/simple"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"] # Base flake8, pyflakes, warnings, isort, pyupgrade
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"

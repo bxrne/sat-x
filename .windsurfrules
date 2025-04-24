@@ -1,0 +1,77 @@
+# Windsurf Rules for the sat-x Project
+
+This file contains rules and guidelines for Cascade (the AI assistant) to follow when working on the `sat-x` project.
+
+## Project Overview
+
+*   **Name:** `sat-x`
+*   **Purpose:** A system monitoring application that collects and exposes system metrics (CPU, memory, disk usage) via a FastAPI backend.
+*   **Language:** Python (v3.11 or later, based on environment used for testing).
+
+## Core Technologies
+
+*   **Web Framework:** FastAPI
+*   **Asynchronous Server:** Uvicorn
+*   **Database ORM:** SQLAlchemy (async version, use `sqlalchemy.ext.asyncio`)
+*   **Database Driver:** `aiosqlite` (primarily for development and testing as configured in `settings.yaml`).
+*   **Data Validation/Serialization:** Pydantic (v2). Use Pydantic models defined in `src/sat_x/api/schemas.py` for API request/response validation and serialization.
+*   **Testing Framework:** `pytest` with the `pytest-asyncio` plugin.
+*   **HTTP Client (Tests):** Use `httpx` via FastAPI's `TestClient`.
+*   **System Metrics:** `psutil` library (`src/sat_x/services/metrics_service.py`).
+*   **Logging:** Loguru library, configured via `src/sat_x/logging_config.py`.
+*   **Configuration:** YAML file (`config/settings.yaml`) loaded via helpers (e.g., `src/sat_x/config.py`).
+*   **Dependency Management:** Use `pyproject.toml` (assume standard pip/venv or Poetry setup).
+
+## Architecture & Conventions
+
+*   **Repository Pattern:** All database operations related to `Metric` objects MUST go through the `MetricRepository` class defined in `src/sat_x/repositories.py`. Instantiate it with an `AsyncSession`.
+*   **Dependency Injection:** Utilize FastAPI's `Depends` system for injecting dependencies, especially the `AsyncSession` via the `get_db_session` function from `src/sat_x/database.py`.
+*   **Asynchronous Code:** Prioritize `async`/`await` for all I/O-bound operations, particularly database interactions and potentially external API calls if added later.
+*   **Configuration:** Load all configuration values from `config/settings.yaml` using the established configuration loading mechanism.
+*   **Logging:** Use the configured Loguru logger. Ensure critical operations, errors, background task executions, and API request lifecycles (if middleware added) are logged appropriately.
+*   **Background Tasks:** The `metrics_collector.py` task runs periodically. Be mindful of its interaction with tests; tests currently run against an app instance *without* the lifespan function that starts this task.
+*   **API Routing:** Define API routes within FastAPI `APIRouter` instances, like the one in `src/sat_x/api/routes.py`.
+*   **Database Models:** Define SQLAlchemy models in `src/sat_x/models.py`.
+
+## Testing Guidelines
+
+*   **Test Client:** Use `fastapi.testclient.TestClient` for sending requests to the API in tests.
+*   **Fixtures:** Leverage `pytest` fixtures in `tests/conftest.py` for setting up test environments (e.g., `test_client`, `test_app`, `test_session_factory`, `setup_database`).
+*   **Test Isolation:** Ensure each test function runs independently. The `setup_database` fixture MUST ensure a clean database (drop/create tables) before each test that uses it.
+*   **Database Sessions in Tests:** DO NOT use the global `get_db_session` directly in tests. Instead, use the `test_session_factory` fixture to create a unique `AsyncSession` within each test function (`async with test_session_factory() as session:`). Override the application's `get_db_session` dependency using `test_app.dependency_overrides` to yield this test-specific session.
+*   **API Contract Testing:** Tests should verify: correct HTTP status codes, response body structure matching Pydantic schemas (`schemas.MetricRead`, etc.), and expected data values.
+*   **Edge Cases:** Include tests for scenarios like: empty database, invalid input (e.g., incorrect time range), boundary conditions.
+*   **Assertions:** Use clear `pytest` assertions.
+
+## Code Style & Quality
+
+*   **PEP 8:** Strictly adhere to PEP 8 guidelines for code formatting and style.
+*   **Type Hinting:** Use Python type hints comprehensively for function arguments, return values, and variables.
+*   **Docstrings:** Write clear and concise Google-style docstrings for all modules, classes, and public functions/methods.
+*   **Modularity:** Keep functions and classes focused on a single responsibility. Avoid overly long functions or classes.
+*   **Naming:** Use descriptive and intention-revealing names for variables, functions, classes, and modules.
+*   **Linters/Formatters:** (Assumed, confirm if project uses specific tools) Assume the project uses tools like Ruff or Black for formatting and linting, and MyPy for type checking. Ensure code passes checks from these tools.
+
+## Development Workflow
+
+*   **Environment:** Use a Python virtual environment (e.g., `.venv`).
+*   **Dependencies:** Manage dependencies via `pyproject.toml`.
+*   **Testing:** Run tests (`pytest`) frequently during development and before committing changes.
+*   **Linting/Formatting:** Run configured linters and formatters before committing code.
+
+## Current Objectives
+
+*   **CI/CD:** Implement GitHub Actions workflows for: 
+    *   Linting the codebase.
+    *   Running the test suite (`pytest`).
+*   **Documentation:** Update `README.md` to include clear instructions on how to set up the development environment, install dependencies, run linters, and run tests.
+
+## Cascade's Behavior
+
+*   **Adherence:** Strictly follow all rules defined in this file.
+*   **Verification:** After making code changes, always propose running `pytest` to ensure tests pass.
+*   **Test Coverage:** When adding new features or modifying existing ones, ensure corresponding tests are added or updated.
+*   **Proactivity:** Proactively suggest improvements aligned with these rules (e.g., adding missing type hints, refactoring complex code, improving test clarity).
+*   **Clarity:** Ask for clarification if a request is ambiguous or conflicts with these rules.
+*   **Focus:** Prioritize tasks related to the 'Current Objectives' section.
+*   **Tool Usage:** Utilize available tools (file editing, command execution, search) effectively to implement requests and verify outcomes.
