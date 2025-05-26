@@ -45,7 +45,6 @@ sat-x = "sat_x.main:app"
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "auto"
-addopts = "-v --cov=sat_x --cov-report=term-missing"
 testpaths = ["tests"]
 
 [tool.ruff]
