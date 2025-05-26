@@ -26,15 +26,14 @@ jobs:
         run: |
           uv venv
           . .venv/bin/activate
-          uv pip install -e ".[test]" 
+          uv sync --extra test
           
       - name: Run Linters
         run: |
           . .venv/bin/activate
-          # Run ruff for fast linting
           uv pip install ruff
+          uv pip install mypy
           ruff check .
-          # Run mypy for type checking
           mypy src/sat_x tests/
 
       - name: Run Tests
