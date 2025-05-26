@@ -1,0 +1,8 @@
+# udev rules for sat-x fan control access
+# This rule gives the gpio group write access to the cooling fan PWM controls
+
+# Match the cooling fan hwmon device and set permissions
+SUBSYSTEM=="hwmon", KERNEL=="hwmon*", ATTRS{name}=="cooling_fan", ACTION=="add", RUN+="/bin/chgrp gpio %S%p/pwm1 %S%p/pwm1_enable", RUN+="/bin/chmod 664 %S%p/pwm1 %S%p/pwm1_enable"
+
+# Alternative rule using device path pattern for RPi 5 cooling fan
+SUBSYSTEMS=="platform", DRIVERS=="cooling_fan", ACTION=="add", RUN+="/bin/chgrp gpio %S%p/hwmon/hwmon*/pwm1* %S%p/hwmon/hwmon*/fan*", RUN+="/bin/chmod 664 %S%p/hwmon/hwmon*/pwm1* %S%p/hwmon/hwmon*/fan*" 
