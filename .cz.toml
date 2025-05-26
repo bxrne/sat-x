@@ -1,0 +1,17 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+version_type = "semver"
+version_provider = "pep621"
+update_changelog_on_bump = true
+major_version_zero = true
+
+[tool.commitizen.settings]
+use_shortcuts = true
+
+# Define commit message patterns for different types of changes
+[tool.commitizen.customize]
+commit_parser = "^(?P<change_type>feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(?:\\((?P<scope>[^\\)\\s]+)\\))?(?P<breaking>!)?:\\s(?P<message>.*)$"
+changelog_pattern = "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\\([^\\)\\s]+\\))?(!)?:"
+change_type_map = {"feat" = "Features", "fix" = "Bug Fixes", "docs" = "Documentation", "style" = "Styles", "refactor" = "Code Refactoring", "perf" = "Performance Improvements", "test" = "Tests", "build" = "Builds", "ci" = "Continuous Integration", "chore" = "Chores"} 
