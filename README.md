@@ -6,11 +6,12 @@ This application monitors system metrics (CPU, RAM, Disk) and stores them in a d
 
 ## Features
 
-*   **System Metrics Monitoring**: Collects CPU, Memory, and Disk usage.
+*   **System Metrics Monitoring**: Collects CPU, Memory, Disk usage, CPU temperature, and fan speed.
+*   **Fan Control**: Automatic fan speed control based on CPU temperature curves (Raspberry Pi 5 support).
 *   **SQLite Database**: Uses SQLAlchemy with `aiosqlite` for asynchronous database operations.
 *   **FastAPI Backend**: Provides a robust, async JSON API based on OpenAPI standards.
 *   **YAML Configuration**: Highly configurable via `config/settings.yaml`.
-*   **Background Tasks**: Uses `asyncio` for running periodic tasks (e.g., metrics collection).
+*   **Background Tasks**: Uses `asyncio` for running periodic tasks (e.g., metrics collection, fan control).
 *   **uv Build System**: Managed with the `uv` package manager.
 *   **Typed Code**: Uses Python type hints throughout.
 *   **Repository Pattern**: Organizes database interactions.
@@ -50,6 +51,17 @@ This application monitors system metrics (CPU, RAM, Disk) and stores them in a d
     sat-x init-db-cli 
     ```
     *   This will create the `satx.db` file (if it doesn't exist) and set up the necessary tables (e.g., `metrics`).
+
+6.  **Setup Fan Control Permissions (Raspberry Pi 5 only)**:
+    *   If you want to use the fan control feature on a Raspberry Pi 5, you need to set up proper permissions:
+    ```bash
+    sudo ./fan_permissions.sh
+    ```
+    *   This script will:
+        *   Install udev rules to automatically set correct permissions for fan control files
+        *   Set the `gpio` group as owner of the fan PWM control files
+        *   Verify your user is in the `gpio` group
+    *   After running this script, the sat-x service will be able to control the fan speed based on CPU temperature.
 
 ## Running the Application
 
