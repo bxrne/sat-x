@@ -8,12 +8,12 @@ After=network.target
 
 # Assumes a virtual environment named .venv in the project root
 # Update this path if your venv or uvicorn location is different
-ExecStart=/home/bxrne/sat-x/.venv/bin/uvicorn sat_x.main:app_instance --host 127.0.0.1 --port 8000
+ExecStart=/home/payload/sat-x/.venv/bin/uvicorn sat_x.main:app_instance --host 127.0.0.1 --port 8000
 
-WorkingDirectory=/home/bxrne/sat-x
+WorkingDirectory=/home/payload/sat-x
 Restart=always
 RestartSec=3
-Environment="PYTHONPATH=/home/bxrne/sat-x/src"
+Environment="PYTHONPATH=/home/payload/sat-x/src"
 
 # Standard output and error logging
 StandardOutput=journal

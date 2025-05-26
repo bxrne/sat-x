@@ -3,7 +3,7 @@
 # Configuration
 SERVICE_NAME="sat-x"
 SERVICE_FILE="${SERVICE_NAME}.service"
-PROJECT_DIR="/home/bxrne/sat-x"
+PROJECT_DIR="/home/payload/sat-x"
 SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
 SOURCE_SERVICE_PATH="${PROJECT_DIR}/${SERVICE_FILE}"
 TARGET_SERVICE_PATH="${SYSTEMD_USER_DIR}/${SERVICE_FILE}"
