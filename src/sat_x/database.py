@@ -1,6 +1,7 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from collections.abc import AsyncGenerator
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-from typing import AsyncGenerator
 
 from .config import settings
 
@@ -12,7 +13,7 @@ engine = create_async_engine(
     # connect_args are important for SQLite with asyncio/multithreading
     # to prevent "SQLite objects created in a thread can only be used in that same thread"
     # The check_same_thread=False is specific to sqlite3 driver used by aiosqlite
-    connect_args={"check_same_thread": False} 
+    connect_args={"check_same_thread": False}
 )
 
 # Create a configured "Session" class

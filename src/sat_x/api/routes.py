@@ -1,12 +1,13 @@
 # src/sat_x/api/routes.py
+import datetime
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
-import datetime
 
 from ..database import get_db_session
 from ..repositories import MetricRepository
-from . import schemas # Import the schemas we just defined
+from . import schemas  # Import the schemas we just defined
 
 # Create an API router
 router = APIRouter()
@@ -35,7 +36,7 @@ async def health_check():
 )
 async def get_latest_metric(
     session: AsyncSession = Depends(get_db_session)
-) -> Optional[schemas.MetricRead]:
+) -> schemas.MetricRead | None:
     """
     Fetches the latest metric record from the database.
     Returns `null` if no metrics have been recorded yet.
@@ -52,7 +53,7 @@ async def get_latest_metric(
 
 @router.get(
     "/metrics/range",
-    response_model=List[schemas.MetricRead],
+    response_model=list[schemas.MetricRead],
     summary="Get Metrics in Time Range",
     description="Retrieves system metrics recorded within a specific time window.",
     tags=["Metrics"]
@@ -62,7 +63,7 @@ async def get_metrics_in_range(
     end_time: datetime.datetime = Query(..., description="End timestamp (ISO 8601 format)"),
     limit: int = Query(100, gt=0, le=1000, description="Maximum number of metrics to return"),
     session: AsyncSession = Depends(get_db_session)
-) -> List[schemas.MetricRead]:
+) -> list[schemas.MetricRead]:
     """
     Fetches metrics recorded between `start_time` and `end_time`.
     Results are ordered by timestamp ascending.

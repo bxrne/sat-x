@@ -1,17 +1,17 @@
 # src/sat_x/api/schemas.py
 import datetime
+
 from pydantic import BaseModel, Field
-from typing import Optional, List
 
 # --- Metric Schemas ---
 
 class MetricBase(BaseModel):
     """Base schema for metric data, used for creation and reading."""
-    cpu_percent: Optional[float] = Field(None, example=15.5, description="CPU utilization percentage")
-    memory_percent: Optional[float] = Field(None, example=45.2, description="RAM utilization percentage")
-    disk_usage_percent: Optional[float] = Field(None, example=60.1, description="Root disk usage percentage")
-    cpu_temp_celsius: Optional[float] = Field(None, example=55.0, description="CPU temperature in Celsius")
-    fan_speed_percent: Optional[float] = Field(None, example=30.0, description="Fan speed percentage")
+    cpu_percent: float | None = Field(None, example=15.5, description="CPU utilization percentage")
+    memory_percent: float | None = Field(None, example=45.2, description="RAM utilization percentage")
+    disk_usage_percent: float | None = Field(None, example=60.1, description="Root disk usage percentage")
+    cpu_temp_celsius: float | None = Field(None, example=55.0, description="CPU temperature in Celsius")
+    fan_speed_percent: float | None = Field(None, example=30.0, description="Fan speed percentage")
     # Add other metrics here if collected
 
 class MetricCreate(MetricBase):
@@ -36,4 +36,4 @@ class HealthCheckResponse(BaseModel):
 # You might add schemas for pagination or bulk responses later
 class PaginatedMetricsResponse(BaseModel):
     total: int
-    items: List[MetricRead]
+    items: list[MetricRead]

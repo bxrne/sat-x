@@ -62,13 +62,11 @@ This application monitors system metrics (CPU, RAM, Disk) and stores them in a d
     sat-x run-server --reload
     ```
 
-*   The API will be available at `http://<host>:<port>` (default: `http://127.0.0.1:8000`).
-*   The OpenAPI documentation (Swagger UI) is usually at `http://127.0.0.1:8000/docs`.
-*   The ReDoc documentation is usually at `http://127.0.0.1:8000/redoc`.
+## Running in dev 
 
-## API Endpoints (Prefix: `/api/v1`)
+Testing can be triggered by `uv run pytest` or `uv run pytest --cov` for coverage reports.
 
-*   `GET /health`: Health check.
-*   `GET /metrics/latest`: Get the most recent metric record.
-*   `GET /metrics/range?start_time=...&end_time=...`: Get metrics within a time range (ISO 8601 format for timestamps).
-
+Linting can be used with `ruff` by running:
+```bash
+uv run ruff check .
+```

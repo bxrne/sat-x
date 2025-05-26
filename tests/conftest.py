@@ -1,18 +1,18 @@
+from collections.abc import Generator
+
 import pytest
 import pytest_asyncio
-from typing import AsyncGenerator, Generator
-
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from sat_x.main import app_instance as original_app, lifespan
 from sat_x.api.routes import router as api_router
 from sat_x.config import Settings, get_settings
-from sat_x.database import Base, get_db_session
+from sat_x.database import Base
 
-# --- Test App Instance (without lifespan) --- 
+
+# --- Test App Instance (without lifespan) ---
 @pytest.fixture(scope="session")
 def test_app() -> FastAPI:
     """Creates a FastAPI instance for testing without the main lifespan."""
@@ -20,7 +20,7 @@ def test_app() -> FastAPI:
     app.include_router(api_router, prefix="/api/v1")
     return app
 
-# --- Settings Override --- 
+# --- Settings Override ---
 # Use a separate in-memory SQLite DB for tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -35,7 +35,7 @@ def test_settings() -> Settings:
     )
     return settings_override
 
-# --- API Test Client Fixture --- 
+# --- API Test Client Fixture ---
 
 @pytest.fixture(scope="function")
 def test_client(
@@ -44,7 +44,7 @@ def test_client(
     setup_database
 ) -> Generator[TestClient, None, None]:
     """Provides a synchronous TestClient using a lifespan-free app."""
-    
+
     def get_override_settings() -> Settings:
         return test_settings
 
@@ -56,15 +56,15 @@ def test_client(
 
     test_app.dependency_overrides.clear()
 
-# --- Database Fixtures --- 
+# --- Database Fixtures ---
 
 @pytest.fixture(scope="session")
 def test_engine():
     """Creates a test database engine (in-memory SQLite)."""
     engine = create_async_engine(
-        TEST_DATABASE_URL, 
+        TEST_DATABASE_URL,
         poolclass=StaticPool,
-        connect_args={"check_same_thread": False} 
+        connect_args={"check_same_thread": False}
     )
     return engine
 
@@ -72,8 +72,8 @@ def test_engine():
 def test_session_factory(test_engine):
     """Creates a session factory bound to the test engine."""
     TestSessionFactory = async_sessionmaker(
-        bind=test_engine, 
-        expire_on_commit=False, 
+        bind=test_engine,
+        expire_on_commit=False,
         class_=AsyncSession
     )
     return TestSessionFactory

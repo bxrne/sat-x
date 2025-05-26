@@ -23,6 +23,7 @@ dependencies = [
     "pytest>=8.0.0", # Testing framework
     "alembic>=1.13.1", # Database migrations
     "pytest-asyncio>=0.26.0",
+    "ruff>=0.11.11",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +34,10 @@ test = [
     "mypy",
     "pytest-cov",
     "ruff",
+]
+dev = [
+    "commitizen>=3.13.0",
+    "pre-commit>=3.6.0",
 ]
 
 [project.scripts]
@@ -61,3 +66,16 @@ quote-style = "double"
 [tool.mypy]
 python_version = "3.13"
 strict = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver"
+version_provider = "pep621"
+update_changelog_on_bump = true
+major_version_zero = true
+changelog_file = "CHANGELOG.md"
+changelog_format = "markdown"
+
+[tool.commitizen.settings]
+use_shortcuts = true

@@ -1,6 +1,5 @@
 import logging
 import sys
-import json
 from pathlib import Path
 
 from loguru import logger
@@ -37,13 +36,13 @@ def setup_logging():
 
     # Add console sink with coloring
     logger.add(
-        sys.stderr, 
-        level=LOG_LEVEL.upper(), 
+        sys.stderr,
+        level=LOG_LEVEL.upper(),
         format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
                "<level>{level: <8}</level> | "
                "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
         colorize=True,
-        backtrace=True, 
+        backtrace=True,
         diagnose=True # Set diagnose=False in production for performance
     )
 
@@ -51,8 +50,8 @@ def setup_logging():
     # Ensure the logs directory exists
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     logger.add(
-        LOG_FILE, 
-        level=LOG_LEVEL.upper(), 
+        LOG_FILE,
+        level=LOG_LEVEL.upper(),
         rotation="10 MB", # Rotate log file when it reaches 10 MB
         retention="7 days", # Keep logs for 7 days
         compression="zip", # Compress rotated logs
@@ -68,7 +67,7 @@ def setup_logging():
     logging.getLogger("uvicorn.access").handlers = [InterceptHandler()]
     logging.getLogger("uvicorn.error").handlers = [InterceptHandler()]
     # Propagate false to prevent uvicorn default handler
-    logging.getLogger("uvicorn.error").propagate = False 
+    logging.getLogger("uvicorn.error").propagate = False
 
     logger.info("Loguru logging configured.")
     logger.info(f"Console log level: {LOG_LEVEL}")

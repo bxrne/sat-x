@@ -1,5 +1,5 @@
+
 import psutil
-from typing import Optional, Dict, Any
 from loguru import logger
 
 # Define the expected path for RPi5 fan speed PWM value
@@ -10,9 +10,9 @@ _FAN_MAX_PWM = 255.0 # Standard max PWM value
 class MetricsService:
     """Service responsible for collecting system metrics."""
 
-    def get_system_metrics(self) -> Dict[str, Optional[float]]:
+    def get_system_metrics(self) -> dict[str, float | None]:
         """Collects CPU, Memory, Disk usage, Temp, and Fan speed."""
-        metrics: Dict[str, Optional[float]] = {
+        metrics: dict[str, float | None] = {
             "cpu_percent": None,
             "memory_percent": None,
             "disk_usage_percent": None,
@@ -60,10 +60,10 @@ class MetricsService:
                  logger.debug("psutil.sensors_temperatures not available on this system.")
         except Exception as e:
             logger.warning(f"Could not collect CPU Temperature metrics: {e}")
-            
+
         # --- Collect Fan Speed Percentage (RPi specific) ---
         try:
-            with open(_FAN_PWM_SYSFS_PATH, 'r') as f:
+            with open(_FAN_PWM_SYSFS_PATH) as f:
                 pwm_value_str = f.read().strip()
                 try:
                     pwm_value = int(pwm_value_str)

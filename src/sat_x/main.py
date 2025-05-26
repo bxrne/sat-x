@@ -1,21 +1,22 @@
 import asyncio
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
 import time
+from contextlib import asynccontextmanager
+
 import typer
 import uvicorn
-from fastapi import FastAPI
-from .logging_config import setup_logging, logger
+from fastapi import FastAPI, Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from .logging_config import logger, setup_logging
 
 setup_logging()
 
 # --- App Initialization ---
-from .config import Settings, get_settings
 from .api import routes as api_routes
-from .database import init_db, engine
-from .tasks.metrics_collector import run_metrics_collector_task
+from .config import Settings, get_settings
+from .database import engine, init_db
 from .tasks.fan_control_task import run_fan_control_task
+from .tasks.metrics_collector import run_metrics_collector_task
 
 # List to keep track of background tasks
 background_tasks = set()
@@ -71,7 +72,7 @@ async def lifespan(app: FastAPI):
                 await asyncio.wait_for(task, timeout=5.0)
             except asyncio.CancelledError:
                 logger.info(f"Task {task.get_name()} cancelled successfully.")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(f"Task {task.get_name()} did not cancel within timeout.")
             except Exception as e:
                 logger.error(

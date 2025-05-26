@@ -1,10 +1,13 @@
 import asyncio
+
 from loguru import logger
 
 from ..config import Settings
+from ..services.fan_control_service import fan_control_service
+
 # Import the services needed
 from ..services.metrics_service import metrics_service
-from ..services.fan_control_service import fan_control_service
+
 
 async def run_fan_control_task(settings: Settings):
     """Periodically checks CPU temp and adjusts fan speed based on config."""
@@ -41,5 +44,5 @@ async def run_fan_control_task(settings: Settings):
         except Exception as e:
             # Catch broad exceptions here to prevent the loop from crashing
             logger.error(f"Unhandled error in fan control loop: {e}", exc_info=True)
-        
+
         await asyncio.sleep(interval)

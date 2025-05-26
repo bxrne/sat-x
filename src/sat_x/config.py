@@ -1,8 +1,7 @@
-import yaml
-from pydantic import BaseModel, Field, HttpUrl, validator
-from typing import List, Optional, Dict, Any
-import os
 from pathlib import Path
+
+import yaml
+from pydantic import BaseModel, Field, validator
 
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -32,10 +31,10 @@ class FanControlSettings(BaseModel):
     enabled: bool = Field(False, description="Enable/disable automatic fan control.")
     interval_seconds: int = Field(10, gt=0, description="How often to check temp and adjust fan.")
     # Note: These paths are typical but might need verification on the target system
-    control_path: Optional[str] = Field("/sys/class/hwmon/hwmon0/pwm1", description="Sysfs path to write PWM value (0-255).")
-    enable_path: Optional[str] = Field("/sys/class/hwmon/hwmon0/pwm1_enable", description="Sysfs path to enable/disable manual PWM control (e.g., write '1').")
-    curve: List[FanCurvePoint] = Field(
-        default_factory=list, 
+    control_path: str | None = Field("/sys/class/hwmon/hwmon0/pwm1", description="Sysfs path to write PWM value (0-255).")
+    enable_path: str | None = Field("/sys/class/hwmon/hwmon0/pwm1_enable", description="Sysfs path to enable/disable manual PWM control (e.g., write '1').")
+    curve: list[FanCurvePoint] = Field(
+        default_factory=list,
         description="List of temp (°C) to speed (%) points, sorted by temp."
     )
 
@@ -58,7 +57,7 @@ class Settings(BaseModel):
     api: ApiSettings
     database: DatabaseSettings
     tasks: TasksSettings
-    fan_control: Optional[FanControlSettings] = None # Added Fan Control
+    fan_control: FanControlSettings | None = None # Added Fan Control
     # Add other top-level settings here
     # logging: LoggingSettings
 
@@ -67,9 +66,9 @@ class Settings(BaseModel):
         """Loads configuration from a YAML file."""
         if not path.exists():
             raise FileNotFoundError(f"Configuration file not found at {path}")
-        
+
         try:
-            with open(path, 'r') as f:
+            with open(path) as f:
                 yaml_data = yaml.safe_load(f)
             return cls.model_validate(yaml_data)
         except yaml.YAMLError as e:

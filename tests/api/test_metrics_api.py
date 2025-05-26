@@ -1,19 +1,20 @@
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Dict, AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
 
 import pytest
-from fastapi import FastAPI 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker 
-from sqlalchemy import select, func
-from sat_x.models import Metric 
-from sat_x.repositories import MetricRepository 
-from sat_x.database import get_db_session # Import the original dependency getter
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from sat_x.database import get_db_session  # Import the original dependency getter
+from sat_x.models import Metric
+from sat_x.repositories import MetricRepository
 
 # Mark all tests in this module as async
 # pytestmark = pytest.mark.asyncio
 
-# --- Test Health Endpoint --- 
+# --- Test Health Endpoint ---
 
 def test_health_check(test_client: TestClient):
     """Test the /health endpoint."""
@@ -21,15 +22,15 @@ def test_health_check(test_client: TestClient):
     assert response.status_code == 200
     assert response.json() == {"status": "OK"}
 
-# --- Test Metrics Endpoints --- 
+# --- Test Metrics Endpoints ---
 
-@pytest.mark.asyncio 
+@pytest.mark.asyncio
 async def test_get_latest_metric_empty(
-    test_client: TestClient, 
+    test_client: TestClient,
     setup_database, # Explicitly request DB setup
     test_session_factory: async_sessionmaker[AsyncSession], # Inject factory
     test_app: FastAPI # Inject test_app to override dependency
-): 
+):
     """Test getting latest metric when database is empty."""
     async with test_session_factory() as session:
         # Override the db session dependency for *this specific test's session*
@@ -49,18 +50,18 @@ async def test_get_latest_metric_empty(
         print(f"DEBUG: Response JSON: {response.text}")
         assert response.status_code == 200
         assert response.json() is None
-    
+
     # Clean up override after test
     del test_app.dependency_overrides[get_db_session]
 
 
-@pytest.mark.asyncio 
+@pytest.mark.asyncio
 async def test_get_latest_metric_with_data(
-    test_client: TestClient, 
+    test_client: TestClient,
     setup_database, # Explicitly request DB setup
     test_session_factory: async_sessionmaker[AsyncSession], # Inject factory
     test_app: FastAPI # Inject test_app to override dependency
-): 
+):
     """Test getting latest metric after adding some data."""
     async with test_session_factory() as session:
         # Override the db session dependency
@@ -69,14 +70,14 @@ async def test_get_latest_metric_with_data(
         test_app.dependency_overrides[get_db_session] = get_override_session
 
         repo = MetricRepository(session) # Use local session
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         metric1 = Metric(timestamp=now - timedelta(minutes=10), cpu_percent=10.0, memory_percent=20.0, disk_usage_percent=30.0)
         metric2 = Metric(timestamp=now - timedelta(minutes=5), cpu_percent=15.0, memory_percent=25.0, disk_usage_percent=35.0) # Newer
-        
+
         await repo.add(metric1)
         await repo.add(metric2)
         await session.commit() # Commit after adding
-        await session.refresh(metric1) 
+        await session.refresh(metric1)
         await session.refresh(metric2)
 
         # Act: Call the API endpoint (sync call)
@@ -86,13 +87,13 @@ async def test_get_latest_metric_with_data(
         assert response.status_code == 200
         data = response.json()
         assert data is not None
-        assert data["id"] == metric2.id 
+        assert data["id"] == metric2.id
         assert data["cpu_percent"] == 15.0
         assert "timestamp" in data
 
 @pytest.mark.asyncio
 async def test_get_metrics_range(
-    test_client: TestClient, 
+    test_client: TestClient,
     setup_database, # Explicitly request DB setup
     test_session_factory: async_sessionmaker[AsyncSession], # Inject factory
     test_app: FastAPI # Inject test_app to override dependency
@@ -105,7 +106,7 @@ async def test_get_metrics_range(
         test_app.dependency_overrides[get_db_session] = get_override_session
 
         # Arrange: Add metrics (timestamps are auto-generated on add/commit)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         metric1 = Metric(timestamp=now - timedelta(minutes=10), cpu_percent=10.0, memory_percent=20.0, disk_usage_percent=30.0)
         metric2 = Metric(timestamp=now - timedelta(minutes=5), cpu_percent=15.0, memory_percent=25.0, disk_usage_percent=35.0)
         metric3 = Metric(timestamp=now - timedelta(minutes=1), cpu_percent=12.0, memory_percent=22.0, disk_usage_percent=32.0)
@@ -118,18 +119,18 @@ async def test_get_metrics_range(
         await session.refresh(metric1)
         await session.refresh(metric2)
         await session.refresh(metric3)
-        
+
         # Need accurate start/end times - get from DB or construct carefully
-        start_time = metric1.timestamp 
+        start_time = metric1.timestamp
         # Ensure end_time includes m3 but potentially excludes anything later
         # Add a small delta to m3's timestamp for safety
         end_time = metric3.timestamp + timedelta(seconds=1)
-        
+
         # Act (sync call)
         response = test_client.get(
             f"/api/v1/metrics/range?start_time={start_time.isoformat()}&end_time={end_time.isoformat()}"
         )
-        
+
         # Assert
         assert response.status_code == 200
         data = response.json()
@@ -142,11 +143,11 @@ async def test_get_metrics_range(
 
 @pytest.mark.asyncio
 async def test_get_metrics_range_invalid_times(
-    test_client: TestClient, 
+    test_client: TestClient,
     setup_database, # Explicitly request DB setup
     test_session_factory: async_sessionmaker[AsyncSession], # Inject factory
     test_app: FastAPI # Inject test_app to override dependency
-): 
+):
     """Test getting metrics with start time after end time."""
     async with test_session_factory() as session:
         # Override the db session dependency
@@ -155,7 +156,7 @@ async def test_get_metrics_range_invalid_times(
         test_app.dependency_overrides[get_db_session] = get_override_session
 
         # No need to add data for this test, just check the response
-        end_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+        end_time = datetime.utcnow().replace(tzinfo=UTC)
         start_time = end_time + timedelta(minutes=10) # Start time after end time
 
         # Format timestamps for URL query (simple format, no timezone)

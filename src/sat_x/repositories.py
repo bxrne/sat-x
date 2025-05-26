@@ -1,17 +1,18 @@
+import datetime
 from abc import ABC, abstractmethod
-from typing import List, Optional, Type, TypeVar, Generic
+from typing import Generic, TypeVar
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .database import Base
 from .models import Metric
-import datetime
 
 ModelType = TypeVar("ModelType", bound=Base)
 
 # --- Generic Base Repository --- (Optional but good practice)
 class BaseRepository(Generic[ModelType], ABC):
-    def __init__(self, session: AsyncSession, model: Type[ModelType]):
+    def __init__(self, session: AsyncSession, model: type[ModelType]):
         self._session = session
         self._model = model
 
@@ -20,11 +21,11 @@ class BaseRepository(Generic[ModelType], ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_by_id(self, entity_id: int) -> Optional[ModelType]:
+    async def get_by_id(self, entity_id: int) -> ModelType | None:
         raise NotImplementedError
 
     @abstractmethod
-    async def list_all(self) -> List[ModelType]:
+    async def list_all(self) -> list[ModelType]:
         raise NotImplementedError
 
 # --- Concrete Metric Repository ---
@@ -40,18 +41,18 @@ class MetricRepository:
         await self._session.refresh(metric)
         return metric
 
-    async def get_latest(self) -> Optional[Metric]:
+    async def get_latest(self) -> Metric | None:
         """Retrieves the most recent metric record."""
         stmt = select(Metric).order_by(Metric.timestamp.desc()).limit(1)
         result = await self._session.execute(stmt)
         return result.scalars().first()
 
     async def get_range(
-        self, 
-        start_time: datetime.datetime, 
-        end_time: datetime.datetime, 
+        self,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
         limit: int = 100
-    ) -> List[Metric]:
+    ) -> list[Metric]:
         """Retrieves metrics within a specified time range."""
         stmt = (
             select(Metric)
@@ -62,7 +63,7 @@ class MetricRepository:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def list_all(self, limit: int = 100) -> List[Metric]:
+    async def list_all(self, limit: int = 100) -> list[Metric]:
         """Lists all metrics, limited by `limit`."""
         stmt = select(Metric).order_by(Metric.timestamp.desc()).limit(limit)
         result = await self._session.execute(stmt)
