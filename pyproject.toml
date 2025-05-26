@@ -12,23 +12,27 @@ license = {text = "MIT"}
 
 # Core dependencies
 dependencies = [
-    "fastapi[all]>=0.109.0",        # Web framework (includes pydantic, uvicorn)
-    "sqlalchemy[asyncio]>=2.0.25",   # ORM
-    "aiosqlite>=0.19.0",            # Async SQLite driver
-    "pyyaml>=6.0.1",                # YAML parsing
-    "psutil>=5.9.8",                # System metrics
-    "typer>=0.9.0",                 # CLI
-    "loguru>=0.7.2",                # Better logging
-    "httpx>=0.27.0",                 # Required by FastAPI TestClient
-    "pytest>=8.0.0",                # Testing framework
-    "alembic>=1.13.1",             # Database migrations
+    "fastapi[all]>=0.109.0", # Web framework (includes pydantic, uvicorn)
+    "sqlalchemy[asyncio]>=2.0.25", # ORM
+    "aiosqlite>=0.19.0", # Async SQLite driver
+    "pyyaml>=6.0.1", # YAML parsing
+    "psutil>=5.9.8", # System metrics
+    "typer>=0.9.0", # CLI
+    "loguru>=0.7.2", # Better logging
+    "httpx>=0.27.0", # Required by FastAPI TestClient
+    "pytest>=8.0.0", # Testing framework
+    "alembic>=1.13.1", # Database migrations
+    "pytest-asyncio>=0.26.0",
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest>=8.0.0",
     "httpx>=0.27.0",
-    "pytest-asyncio>=0.23.0"
+    "pytest-asyncio>=0.23.0",
+    "mypy",
+    "pytest-cov",
+    "ruff",
 ]
 
 [project.scripts]
@@ -41,6 +45,8 @@ sat-x = "sat_x.main:app"
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+addopts = "-v --cov=sat_x --cov-report=term-missing"
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 88
@@ -52,3 +58,7 @@ ignore = []
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true

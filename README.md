@@ -72,21 +72,3 @@ This application monitors system metrics (CPU, RAM, Disk) and stores them in a d
 *   `GET /metrics/latest`: Get the most recent metric record.
 *   `GET /metrics/range?start_time=...&end_time=...`: Get metrics within a time range (ISO 8601 format for timestamps).
 
-## Running with Systemd
-
-(Placeholder - Instructions to be added)
-
-1.  Create a `.service` file (e.g., `/etc/systemd/system/sat-x.service`).
-2.  Configure `User`, `Group`, `WorkingDirectory`, `ExecStart` (pointing to the `sat-x run-server` command within the virtual environment).
-3.  Set up environment variables if needed (e.g., `CONFIG_PATH`).
-4.  Enable and start the service (`systemctl enable sat-x`, `systemctl start sat-x`).
-
-## TODO / Future Enhancements
-
-*   Implement proper logging configuration.
-*   Add more system metrics (e.g., temperature, network I/O).
-*   Implement database migrations using Alembic.
-*   Add unit and integration tests.
-*   Secure API endpoints if necessary.
-*   Add more sophisticated background task management.
-*   Complete Systemd integration guide.
